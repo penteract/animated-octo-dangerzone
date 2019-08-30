@@ -1,26 +1,22 @@
-var paragraph2words = function(para) {
-  return para.text().split(' ');
-};
-
-var paragraph2sentences = function(para) {
-  var words = paragraph2words(para);
+var block2sentences = function(para,block) {
+  var words = block;
   var font = para.css('font');
   var body = $('body');
   var container = $('<div></div>');
   container.css(font);
-  container.css({'visibility': 'hidden'});
+  container.hide();
   container.width(para.width());
   para.after(container);
-  var sentence = words[0];
-  container.append(words[0]);
+  container.append("hello");
   var init_height = container.height();
-  var sentences = [];
+  var sentence = words[0];
 
+  var sentences = [];
   for (var i = 1; i < words.length; i++) {
     var word = words[i];
-    container.text(sentence + ' ' + word);
-    if (container.height() > init_height) {
-      container.text('');
+    container.html(sentence + word);
+    if (container.height() > init_height*1.2) {
+      container.html('');
       sentences.push(sentence);
       sentence = word;
 
@@ -30,7 +26,7 @@ var paragraph2sentences = function(para) {
         container.removeClass('backward');
       }
     } else {
-      sentence += ' ' + word;
+      sentence += word;
     }
   }
 
@@ -39,29 +35,45 @@ var paragraph2sentences = function(para) {
   return sentences;
 };
 
+function transformbyblocks(blocks,p,origHTML,para){
+  var sentencess = blocks.map(block=>block2sentences(para,block));
+  para.html('');
+  sentencess.forEach((sentences,idx)=>{
+    for (var i = 0; i < sentences.length; i++) {
+      var c;
+      if (i % 2 == 0) c = 'forward';
+      else c = 'backward';
+      para.append('<div class="'+ c +'">'+ sentences[i] +'</div>');
+  }})
+    $(window).resize(function(e) {
+      para.html(origHTML);
+      $(window).unbind(e);
+      transformbyblocks(blocks,p,origHTML,para);
+    });
+}
+
+
 var transform_paragraph = function(para) {
-  var sentences = paragraph2sentences(para);
-  var original_text = para.text();
-  para.text('');
-  for (var i = 0; i < sentences.length; i++) {
-    var c;
-    if (i % 2 == 0) {
-      c = 'forward';
-    } else {
-      c = 'backward';
-    }
-
-    para.append('<div class="'+ c +'">'+ sentences[i] +'</div>');
+  if(para.innerHTML){
+    var blocks = para2blocks(para)
+    transformbyblocks(blocks,para,para.innerHTML,$(para))
   }
+}
 
-  $(window).resize(function(e) {
-    para.text(original_text);
-    $(window).unbind(e);
-    transform_paragraph(para);
-  });
-};
+function para2blocks(para){
+    var cs = para.childNodes
+    var blocks=[]
+    var block=[]
+    for(var i=0;i<cs.length;i++){
+        if (cs[i].nodeName=="#text") block=block.concat(cs[i].textContent.split(" ").map((x,i)=>i==0?x:" "+x))
+        else if (cs[i].tagName=="BR") {block.push("<br />"); blocks.push(block); block=[]}
+        else block.push(cs[i].outerHTML)
+    }
+    blocks.push(block)
+    //console.log(blocks)
+    return blocks
+}
 
 $(document).ready(function() {
-  $('p').each(function(i,e) { transform_paragraph($(e)); });
+  $('p').each(function(i,e) { transform_paragraph(e); });
 });
-
